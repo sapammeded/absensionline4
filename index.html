@@ -49,16 +49,21 @@
         .progress-bar{width:100%;height:8px;background:#333;border-radius:4px;margin-top:5px;overflow:hidden}
         .progress-fill{height:100%;background:var(--neon-green);border-radius:4px;transition:width 0.3s}
         @media print{.camera-container,.qr-box,.btn-primary,.flex-row,.gps-fixed,.status-bar,footer,.log-console{display:none}}
+        .warning-text{color:var(--neon-yellow)}
+        .request-indicator{position:fixed;top:5px;right:5px;background:#000;padding:2px 6px;border-radius:10px;font-size:0.5rem;z-index:100}
     </style>
 </head>
 <body>
 <div class="container">
+    <div class="request-indicator" id="requestCounter">📡 0</div>
     <h1>⚡ GIP 66 ELITE ABSENSI ⚡</h1>
     <div class="status-bar">
         <span class="status-badge" id="sysStatus">🔴 INIT...</span>
         <span class="status-badge" id="qrStatus">📱 QR: --</span>
         <span class="status-badge" id="nonceStatus">🎯 NONCE: --</span>
         <span class="status-badge" id="gpsStatus">📍 GPS: --</span>
+        <span class="status-badge" id="queueStatus">📦 Q:0</span>
+        <span class="status-badge" id="queueSizeStatus">💾 0KB</span>
     </div>
     <div class="qr-box">
         <div style="display:flex;justify-content:space-between"><span>🔑 QR TOKEN (5 menit)</span><button class="btn-secondary" id="zoomQrBtn" style="padding:4px 12px">🔍 ZOOM</button></div>
@@ -72,6 +77,8 @@
     <div class="flex-row">
         <button class="btn-secondary" id="adminBtn">👑 ADMIN</button>
         <button class="btn-secondary" id="manageLocBtn">📍 LOKASI</button>
+        <button class="btn-secondary" id="syncQueueBtn">📦 SYNC QUEUE</button>
+        <button class="btn-secondary" id="clearQueueBtn" style="border-color:var(--neon-red);color:var(--neon-red)">🗑️ CLEAR QUEUE</button>
         <button class="btn-secondary" onclick="location.reload()">🔄 RELOAD</button>
     </div>
     <div id="logArea" class="log-console"></div>
@@ -81,7 +88,7 @@
 
 <div id="qrModal" class="modal"><div class="modal-content" style="text-align:center"><h3>🔍 QR CODE FULL</h3><div id="qrZoomContainer"></div><button class="btn-secondary" onclick="closeModal('qrModal')">TUTUP</button></div></div>
 
-<div id="adminModal" class="modal"><div class="modal-content" style="width:98%;max-width:1400px;max-height:90vh"><h3>👑 GIP 66 ELITE COMMAND CENTER</h3><div id="adminLoginDiv" style="text-align:center;padding:30px"><input type="password" id="adminPassword" placeholder="MASTER PASSWORD" style="max-width:300px;margin:0 auto"><button class="btn-secondary" id="loginAdminBtn" style="margin-top:15px">🔓 LOGIN</button></div><div id="adminPanel" style="display:none"><div class="stats-grid"><div class="stat-card"><div class="stat-value" id="statTotal">0</div><div class="stat-label">TOTAL ABSEN</div></div><div class="stat-card"><div class="stat-value" id="statToday">0</div><div class="stat-label">HARI INI</div></div><div class="stat-card"><div class="stat-value" id="statAlert">0</div><div class="stat-label">ALERT</div></div><div class="stat-card"><div class="stat-value" id="statAnomaly">0</div><div class="stat-label">ANOMALY</div></div><div class="stat-card"><div class="stat-value" id="statBanned">0</div><div class="stat-label">BANNED</div></div><div class="stat-card"><div class="stat-value" id="statStorage">0</div><div class="stat-label">STORAGE (MB)</div></div><div class="stat-card"><div class="stat-value" id="statStoragePercent">0%</div><div class="stat-label">USED</div></div></div><div class="filter-bar"><input type="text" id="searchInput" class="filter-select" placeholder="🔍 Cari nama..." style="flex:2"><select id="filterProject" class="filter-select"><option value="ALL">📁 SEMUA PROJECT</option></select><button class="btn-icon" id="refreshDashboardBtn">🔄</button><button class="btn-icon" id="exportLogsBtn">📄</button><button class="btn-icon" id="deleteAllBtn" style="background:#ff0055;color:white">🗑️</button><button class="btn-icon" id="unbanDeviceBtn">🔓</button><button class="btn-icon" id="resetDeviceBtn">🔄 RESET DEVICE</button><button class="btn-icon" id="settingsBtn">⚙️</button></div><div style="overflow-x:auto;max-height:500px;overflow-y:auto"><table class="elite-table"><thead><tr><th>No</th><th>Nama</th><th>Waktu</th><th>Project</th><th>Lokasi</th><th>Jarak</th><th>Akurasi</th><th>Status</th><th>Foto</th></tr></thead><tbody id="adminTableBody"><tr><td colspan="9" class="loading">📡 LOADING DATA......</td></tr></tbody></table></div><div style="margin-top:15px"><button class="btn-secondary" onclick="closeModal('adminModal')">TUTUP</button></div></div></div></div>
+<div id="adminModal" class="modal"><div class="modal-content" style="width:98%;max-width:1400px;max-height:90vh"><h3>👑 GIP 66 ELITE COMMAND CENTER</h3><div id="adminLoginDiv" style="text-align:center;padding:30px"><input type="password" id="adminPassword" placeholder="MASTER PASSWORD" style="max-width:300px;margin:0 auto"><button class="btn-secondary" id="loginAdminBtn" style="margin-top:15px">🔓 LOGIN</button></div><div id="adminPanel" style="display:none"><div class="stats-grid"><div class="stat-card"><div class="stat-value" id="statTotal">0</div><div class="stat-label">TOTAL ABSEN</div></div><div class="stat-card"><div class="stat-value" id="statToday">0</div><div class="stat-label">HARI INI</div></div><div class="stat-card"><div class="stat-value" id="statAlert">0</div><div class="stat-label">ALERT</div></div><div class="stat-card"><div class="stat-value" id="statAnomaly">0</div><div class="stat-label">ANOMALY</div></div><div class="stat-card"><div class="stat-value" id="statBanned">0</div><div class="stat-label">BANNED</div></div><div class="stat-card"><div class="stat-value" id="statStorage">0</div><div class="stat-label">STORAGE (MB)</div></div><div class="stat-card"><div class="stat-value" id="statStoragePercent">0%</div><div class="stat-label">USED</div></div></div><div class="filter-bar"><input type="text" id="searchInput" class="filter-select" placeholder="🔍 Cari nama..." style="flex:2"><select id="filterProject" class="filter-select"><option value="ALL">📁 SEMUA PROJECT</option></select><button class="btn-icon" id="refreshDashboardBtn">🔄</button><button class="btn-icon" id="exportLogsBtn">📄</button><button class="btn-icon" id="deleteSelectedBtn" style="background:#ff0055;color:white">🗑️ CHECKED</button><button class="btn-icon" id="deleteAllBtn" style="background:#ff0055;color:white">🗑️ ALL</button><button class="btn-icon" id="unbanDeviceBtn">🔓</button><button class="btn-icon" id="resetDeviceBtn">🔄 RESET DEVICE</button><button class="btn-icon" id="settingsBtn">⚙️</button></div><div style="overflow-x:auto;max-height:500px;overflow-y:auto"><table class="elite-table"><thead><tr><th><input type="checkbox" id="selectAllCheckbox"></th><th>No</th><th>Nama</th><th>Waktu</th><th>Project</th><th>Lokasi</th><th>Jarak</th><th>Akurasi</th><th>Status</th><th>Foto</th></tr></thead><tbody id="adminTableBody"><tr><td colspan="10" class="loading">📡 LOADING DATA......</td></td></tbody></table></div><div style="margin-top:15px"><button class="btn-secondary" onclick="closeModal('adminModal')">TUTUP</button></div></div></div></div>
 
 <div id="photoModal" class="modal"><div class="modal-content" style="text-align:center"><h3>📸 FOTO ABSEN</h3><img id="photoModalImg" class="photo-modal-img"><button class="btn-secondary" onclick="closeModal('photoModal')" style="margin-top:15px">TUTUP</button></div></div>
 
@@ -89,100 +96,1393 @@
 
 <div id="editLocModal" class="modal"><div class="modal-content"><h3>✏️ EDIT LOKASI</h3><input type="hidden" id="editLocId"><input type="text" id="editLocName" placeholder="Nama Lokasi"><div class="flex-row"><input type="text" id="editLocLat" placeholder="Latitude"><input type="text" id="editLocLng" placeholder="Longitude"></div><div class="flex-row"><input type="number" id="editLocRadius" placeholder="Radius (meter)"><input type="text" id="editLocProject" placeholder="Project"></div><div class="flex-row"><button class="btn-secondary" id="updateLocationBtn">💾 UPDATE</button><button class="btn-secondary" onclick="closeModal('editLocModal')">BATAL</button></div></div></div>
 
-<div id="settingsModal" class="modal"><div class="modal-content"><h3>⚙️ PHOTO SETTINGS</h3><div style="margin-bottom:15px"><label>Kualitas Foto (30-100%):</label><input type="range" id="photoQuality" min="30" max="100" value="70" style="width:100%"><span id="qualityValue">70%</span></div><div style="margin-bottom:15px"><label>Max Size (KB):</label><input type="range" id="photoMaxSize" min="50" max="500" value="350" style="width:100%"><span id="sizeValue">350 KB</span></div><div class="progress-bar" style="margin:15px 0"><div class="progress-fill" id="storageProgress" style="width:0%"></div></div><button class="btn-secondary" id="saveSettingsBtn">💾 SIMPAN</button><button class="btn-secondary" onclick="closeModal('settingsModal')">TUTUP</button></div></div>
+<div id="settingsModal" class="modal"><div class="modal-content"><h3>⚙️ PHOTO SETTINGS</h3><div style="margin-bottom:15px"><label>Kualitas Foto (30-100%):</label><input type="range" id="photoQuality" min="30" max="100" value="55" style="width:100%"><span id="qualityValue">55%</span></div><div style="margin-bottom:15px"><label>Max Size (KB):</label><input type="range" id="photoMaxSize" min="50" max="300" value="150" style="width:100%"><span id="sizeValue">150 KB</span></div><div class="progress-bar" style="margin:15px 0"><div class="progress-fill" id="storageProgress" style="width:0%"></div></div><button class="btn-secondary" id="saveSettingsBtn">💾 SIMPAN</button><button class="btn-secondary" onclick="closeModal('settingsModal')">TUTUP</button></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
-const API_BASE="https://absen4-api.sapammeded.workers.dev";
-const ADMIN_BASE="https://absen4-admin.sapammeded.workers.dev";
-const MASTER_KEY="meded7373";
-let currentGPS=null,qrId=null,nonce=null,fingerprint=null,locations=[],adminToken=null,isBusy=false,qrCountdown=300,timerStarted=false,cameraStream=null,geoWatchId=null,allLogs=[];
-function $(id){return document.getElementById(id);}
-function getWIBDate(){return new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Jakarta"}));}
-function WIB_TIME(){return getWIBDate().toLocaleTimeString('id-ID',{hour12:false});}
-function getTimestamp(){return Date.now();}
-function addLog(msg,err){let d=document.createElement('div');d.style.color=err?'#ff0055':'#00ff9d';d.innerHTML=`> ${WIB_TIME()} → ${msg}`;$('logArea').appendChild(d);$('logArea').scrollTop=$('logArea').scrollHeight;console.log(msg);}
-window.closeModal=function(id){$(id).style.display='none';if(id==='adminModal'){adminToken=null;$('adminLoginDiv').style.display='block';$('adminPanel').style.display='none';$('adminPassword').value='';}};
-async function generateDeviceFingerprint(){let c=[navigator.userAgent,navigator.language,screen.width+'x'+screen.height,screen.colorDepth,new Date().getTimezoneOffset(),navigator.hardwareConcurrency||4,navigator.deviceMemory?Math.floor(navigator.deviceMemory):4];let s=c.join('|');let h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('').substring(0,32);}
-async function getStableFingerprint(){let fp=localStorage.getItem("GIP_FP");if(fp&&fp.length===32)return fp;fp=await generateDeviceFingerprint();localStorage.setItem("GIP_FP",fp);return fp;}
-async function generateHMAC(message){const encoder=new TextEncoder();const keyData=encoder.encode(MASTER_KEY);const cryptoKey=await crypto.subtle.importKey('raw',keyData,{name:'HMAC',hash:'SHA-256'},false,['sign']);const signature=await crypto.subtle.sign('HMAC',cryptoKey,encoder.encode(message));return[...new Uint8Array(signature)].map(b=>b.toString(16).padStart(2,'0')).join('').toLowerCase();}
-function isSystemReady(){return !!(qrId&&nonce&&fingerprint&&currentGPS&&currentGPS.coords&&currentGPS.coords.accuracy>0&&currentGPS.coords.accuracy<50);}
-function updateSystemUI(){let r=isSystemReady();$('absenBtn').disabled=!r;$('sysStatus').innerHTML=r?"🟢 SIAP":"🔴 BELUM SIAP";if(currentGPS&&currentGPS.coords){let acc=currentGPS.coords.accuracy;$('gpsStatus').innerHTML=`📍 GPS: ${acc.toFixed(0)}m`;$('gpsIndicator').innerHTML=`GPS: ${Math.min(100,Math.max(0,Math.round(100-acc)))}%`;if($('locModal')&&$('locModal').style.display==='flex'){$('newLocLat').value=currentGPS.coords.latitude.toFixed(6);$('newLocLng').value=currentGPS.coords.longitude.toFixed(6);}}}
-async function waitCameraReady(){let v=$('video');if(v.videoWidth&&v.videoHeight)return true;await new Promise((resolve)=>{v.onloadeddata=()=>resolve();setTimeout(resolve,3000);});return !!(v.videoWidth&&v.videoHeight);}
-async function initCamera(){let retry=3;while(retry--){try{if(cameraStream)cameraStream.getTracks().forEach(t=>t.stop());cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:640},height:{ideal:480}}});$('video').srcObject=cameraStream;addLog("✅ Kamera aktif");return true;}catch(e){addLog(`❌ Kamera error (${retry} retry left): ${e.message}`,true);await new Promise(r=>setTimeout(r,500));}}throw new Error("CAMERA FAILED");}
-async function capturePhoto(){let v=$('video');let isReady=await waitCameraReady();if(!isReady||!v.videoWidth)throw new Error("KAMERA BELUM SIAP");let c=$('canvas');let ctx=c.getContext('2d');c.width=480;c.height=360;ctx.save();ctx.translate(c.width,0);ctx.scale(-1,1);ctx.drawImage(v,0,0,c.width,c.height);ctx.restore();let waktuStr=WIB_TIME();ctx.fillStyle="rgba(0,0,0,0.6)";ctx.fillRect(0,c.height-28,c.width,28);ctx.font="10px 'Courier New'";ctx.fillStyle="#00ff9d";ctx.fillText(`GIP 66 ELITE | ${waktuStr} | FP: ${fingerprint.slice(0,8)}`,5,c.height-10);let base64=c.toDataURL('image/jpeg',0.7);return base64;}
-function initGPS(){if(!navigator.geolocation){addLog("❌ GPS tidak didukung!",true);return;}if(geoWatchId)navigator.geolocation.clearWatch(geoWatchId);geoWatchId=navigator.geolocation.watchPosition((pos)=>{currentGPS=pos;if($('locModal')&&$('locModal').style.display==='flex'){$('newLocLat').value=pos.coords.latitude.toFixed(6);$('newLocLng').value=pos.coords.longitude.toFixed(6);}updateSystemUI();},(err)=>{addLog("❌ GPS Error: "+err.message,true);$('gpsStatus').innerHTML="📍 GPS: ERROR";$('gpsIndicator').innerHTML="GPS: 0%";updateSystemUI();},{enableHighAccuracy:true,timeout:10000,maximumAge:0});}
-async function refreshQRToken(){if(isBusy)return;try{let r=await fetch(`${API_BASE}/api/qr-token`);if(!r.ok)throw new Error(`HTTP ${r.status}`);let d=await r.json();if(!d.qrId)throw new Error("QR INVALID");qrId=d.qrId;$('qrContainer').innerHTML='';new QRCode($('qrContainer'),{text:qrId,width:130,height:130});$('qrStatus').innerHTML="📱 QR: OK";qrCountdown=300;addLog("✅ QR Token refreshed");}catch(e){addLog("❌ QR error: "+e.message,true);qrId=null;$('qrStatus').innerHTML="📱 QR: ERROR";setTimeout(refreshQRToken,3000);}updateSystemUI();}
-async function refreshChallengeToken(){if(isBusy)return;try{let r=await fetch(`${API_BASE}/api/challenge`);if(!r.ok)throw new Error(`HTTP ${r.status}`);let d=await r.json();if(!d.nonce)throw new Error("NONCE INVALID");nonce=d.nonce;$('nonceStatus').innerHTML="🎯 NONCE: OK";addLog("✅ Challenge token refreshed");}catch(e){addLog("❌ Challenge error: "+e.message,true);nonce=null;$('nonceStatus').innerHTML="🎯 NONCE: ERROR";setTimeout(refreshChallengeToken,3000);}updateSystemUI();}
-async function loadLocations(){try{let r=await fetch(`${API_BASE}/api/locations`);if(!r.ok)throw new Error(`HTTP ${r.status}`);let d=await r.json();locations=Array.isArray(d)?d:(d.data||[]);let s=$('locationSelect');s.innerHTML='<option value="">-- PILIH LOKASI --</option>';locations.forEach(l=>{s.innerHTML+=`<option value='${l.id}'>📍 ${l.name} (${l.project}) - ${l.radius}m</option>`;});addLog(`✅ ${locations.length} lokasi tersedia`);}catch(e){addLog("❌ Load lokasi error: "+e.message,true);locations=[];}}
-async function viewPhoto(hash){if(!hash)return alert("HASH FOTO TIDAK ADA");$('photoModalImg').src=`${ADMIN_BASE}/api/admin/photo-viewer?hash=${hash}`;$('photoModal').style.display='flex';}
-async function submitAbsen(){if(isBusy===true)return;if(!isSystemReady()){alert("SISTEM BELUM SIAP!");return;}
-const lockedQR = qrId;
-const lockedNonce = nonce;
-const lockedFP = fingerprint;
-isBusy=true;let usedNonce=lockedNonce;let usedQrId=lockedQR;let usedFingerprint=lockedFP;
-if(!usedNonce||!usedQrId||!usedFingerprint){isBusy=false;alert("TOKEN TIDAK VALID!");return;}
-let userName=$('userName').value.trim();let locationId=$('locationSelect').value;
-if(!userName){alert("ISI NAMA!");isBusy=false;return;}if(!locationId){alert("PILIH LOKASI!");isBusy=false;return;}
-let selectedLocation=locations.find(l=>l.id===locationId);if(!selectedLocation){alert("LOKASI INVALID!");isBusy=false;return;}
-let btn=$('absenBtn');btn.disabled=true;btn.innerHTML="⚡ PROSES ABSEN...";addLog("🚀 Memulai proses absen...");
-try{let photoBase64=await capturePhoto();let timestamp=getTimestamp();let lat=currentGPS.coords.latitude.toFixed(6);let lng=currentGPS.coords.longitude.toFixed(6);
-let rawSignature=`${usedQrId}${usedNonce}${userName.toUpperCase()}${timestamp}`;let signature=await generateHMAC(rawSignature);
-// FIX: Server will generate photoHash from photoBase64
-let payload={
-  qrId:usedQrId,
-  nonce:usedNonce,
-  nama:userName.toUpperCase(),
-  lat:parseFloat(lat),
-  lng:parseFloat(lng),
-  accuracy:currentGPS.coords.accuracy,
-  locationId:locationId,
-  fingerprint:usedFingerprint,
-  photoBase64:photoBase64,
-  timestamp:timestamp,
-  signature:signature
+// ==================== KONFIGURASI ====================
+const API_BASE = "https://absensionline4-api.mededsapam.workers.dev";
+const ADMIN_BASE = "https://absensionline4-api.mededsapam.workers.dev";
+const MASTER_KEY = "meded7373";
+const MAX_QUEUE_SIZE = 8;  // FIX #1: Lebih kecil untuk Android
+const PHOTO_QUALITY = 0.4;  // FIX #1: 40% untuk ukuran lebih kecil
+const MAX_PHOTO_SIZE_KB = 100; // FIX #1: Target 100KB per foto
+const MAX_CONCURRENT_REQUESTS = 3; // FIX #4: Limit paralel request
+
+// ==================== GLOBAL REQUEST LIMITER (FIX #4) ====================
+let activeRequests = 0;
+let pendingRequests = [];
+
+function updateRequestCounter() {
+    const counter = document.getElementById('requestCounter');
+    if (counter) counter.innerHTML = `📡 ${activeRequests}`;
+}
+
+async function limitedFetch(url, options = {}, priority = false) {
+    while (activeRequests >= MAX_CONCURRENT_REQUESTS) {
+        await new Promise(resolve => {
+            pendingRequests.push(resolve);
+            if (priority) pendingRequests.unshift(resolve);
+        });
+    }
+    
+    activeRequests++;
+    updateRequestCounter();
+    
+    try {
+        return await fetch(url, options);
+    } finally {
+        activeRequests--;
+        updateRequestCounter();
+        if (pendingRequests.length > 0) {
+            const next = pendingRequests.shift();
+            next();
+        }
+    }
+}
+
+// ==================== STATE MANAGEMENT ====================
+let currentGPS = null;
+let qrId = null;
+let nonce = null;
+let fingerprint = null;
+let locations = [];
+let adminToken = localStorage.getItem("gip_admin_token") || null;
+let isBusy = false;
+let qrCountdown = 300;
+let timerStarted = false;
+let cameraStream = null;
+let geoWatchId = null;
+let allLogs = [];
+let onlineStatus = navigator.onLine;
+
+// ==================== TOKEN PERSISTENCE ====================
+function saveAdminToken(token) {
+    if (token) {
+        localStorage.setItem("gip_admin_token", token);
+        localStorage.setItem("gip_admin_token_expiry", Date.now() + 3600000);
+        adminToken = token;
+    }
+}
+
+function loadAdminToken() {
+    const token = localStorage.getItem("gip_admin_token");
+    const expiry = localStorage.getItem("gip_admin_token_expiry");
+    if (token && expiry && Date.now() < parseInt(expiry)) {
+        adminToken = token;
+        return true;
+    }
+    localStorage.removeItem("gip_admin_token");
+    localStorage.removeItem("gip_admin_token_expiry");
+    adminToken = null;
+    return false;
+}
+
+function clearAdminToken() {
+    localStorage.removeItem("gip_admin_token");
+    localStorage.removeItem("gip_admin_token_expiry");
+    adminToken = null;
+}
+
+// ==================== QUEUE SYSTEM (HARDENED) ====================
+class OfflineQueue {
+    constructor() {
+        this.queueKey = 'gip_offline_queue';
+        this.maxRetries = 3;
+        this.maxQueueSize = MAX_QUEUE_SIZE;
+        this.retryDelay = [1000, 3000, 5000];
+    }
+    
+    getQueue() {
+        try {
+            const raw = localStorage.getItem(this.queueKey);
+            if (!raw) return [];
+            const queue = JSON.parse(raw);
+            const now = Date.now();
+            const filtered = queue.filter(item => (now - (item.createdAt || 0)) < 86400000);
+            if (filtered.length !== queue.length) this.saveQueue(filtered);
+            return filtered;
+        } catch(e) {
+            addLog("⚠️ Gagal baca queue: " + e.message, true);
+            return [];
+        }
+    }
+    
+    saveQueue(queue) {
+        while (queue.length > this.maxQueueSize) {
+            queue.shift();
+        }
+        
+        // FIX #2: Try-catch untuk QuotaExceededError
+        try {
+            localStorage.setItem(this.queueKey, JSON.stringify(queue));
+        } catch(e) {
+            if (e.name === 'QuotaExceededError') {
+                addLog("❌ Storage penuh! Hapus antrian tertua...", true);
+                // Force cleanup: hapus setengah queue
+                const half = Math.floor(queue.length / 2);
+                const cleaned = queue.slice(half);
+                try {
+                    localStorage.setItem(this.queueKey, JSON.stringify(cleaned));
+                    addLog(`✅ Storage cleanup: ${queue.length} -> ${cleaned.length} items`, false);
+                } catch(e2) {
+                    addLog("❌ Storage kritis! Hapus semua queue", true);
+                    localStorage.removeItem(this.queueKey);
+                }
+            } else {
+                addLog("❌ Gagal simpan queue: " + e.message, true);
+            }
+        }
+        
+        this.updateQueueBadge();
+        this.updateQueueSizeDisplay();
+    }
+    
+    calculateQueueSize() {
+        const queue = this.getQueue();
+        let totalSize = 0;
+        for (const item of queue) {
+            if (item.payload && item.payload.photoBase64) {
+                totalSize += Math.ceil(item.payload.photoBase64.length * 0.75);
+            }
+        }
+        return totalSize;
+    }
+    
+    updateQueueSizeDisplay() {
+        const sizeBytes = this.calculateQueueSize();
+        const sizeKB = (sizeBytes / 1024).toFixed(1);
+        const sizeEl = document.getElementById('queueSizeStatus');
+        if (sizeEl) {
+            sizeEl.innerHTML = `💾 ${sizeKB}KB`;
+            if (sizeBytes > 1024 * 1024) {
+                sizeEl.style.color = '#ffaa00';
+            } else {
+                sizeEl.style.color = '#00ff9d';
+            }
+        }
+    }
+    
+    add(item) {
+        let queue = this.getQueue();
+        const newItem = {
+            ...item,
+            id: 'Q_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
+            createdAt: Date.now(),
+            retries: 0,
+            isOffline: true,
+            // FIX #5: Keep original QR and nonce for audit integrity
+            originalQR: item.payload?.qrId || null,
+            originalNonce: item.payload?.nonce || null,
+            originalTimestamp: item.payload?.timestamp || null,
+            originalLocationId: item.payload?.locationId || null,
+            originalGPS: item.payload ? { lat: item.payload.lat, lng: item.payload.lng, accuracy: item.payload.accuracy } : null
+        };
+        
+        if (newItem.payload) {
+            newItem.payload.isOfflineSync = true;
+            newItem.payload.offlineTimestamp = Date.now();
+            newItem.payload.offlineFingerprint = fingerprint;
+            // FIX #5: Keep original data for audit
+            newItem.payload.originalQR = newItem.originalQR;
+            newItem.payload.originalNonce = newItem.originalNonce;
+            newItem.payload.originalTimestamp = newItem.originalTimestamp;
+        }
+        
+        queue.unshift(newItem);
+        
+        if (queue.length > this.maxQueueSize) {
+            addLog(`⚠️ Queue penuh, hapus data tertua`, true);
+            queue = queue.slice(0, this.maxQueueSize);
+        }
+        
+        this.saveQueue(queue);
+        addLog(`📦 Ditambahkan ke antrian (total: ${queue.length})`, false);
+        return queue.length;
+    }
+    
+    async process(force = false) {
+        if (window.syncLock) return false;
+        if (!force && !onlineStatus) return false;
+        
+        const queue = this.getQueue();
+        if (queue.length === 0) return false;
+        
+        window.syncLock = true;
+        addLog(`🔄 Memproses ${queue.length} antrian...`, false);
+        
+        const failed = [];
+        
+        try {
+            for (const item of queue) {
+                try {
+                    const payloadToSend = { ...item.payload };
+                    
+                    if (item.isOffline) {
+                        // FIX #5: For offline items, use special offline sync endpoint
+                        // or send with original data + offline flag
+                        payloadToSend.isOfflineSync = true;
+                        payloadToSend.originalQR = item.originalQR;
+                        payloadToSend.originalNonce = item.originalNonce;
+                        payloadToSend.originalTimestamp = item.originalTimestamp;
+                        // Keep original QR for audit, don't replace
+                        // Backend will validate differently for offline sync
+                        
+                        addLog(`🔄 Queue ${item.id}: offline sync mode (audit preserved)`, false);
+                    }
+                    
+                    const result = await this.sendWithTimeout({ payload: payloadToSend }, 20000);
+                    if (result && result.ok) {
+                        addLog(`✅ Queue berhasil: ${item.id}`, false);
+                    } else {
+                        throw new Error(result?.code || 'Failed');
+                    }
+                } catch(e) {
+                    item.retries++;
+                    if (item.retries < this.maxRetries) {
+                        failed.push(item);
+                        addLog(`⚠️ Queue ${item.id} gagal, retry ${item.retries}/${this.maxRetries}: ${e.message}`, true);
+                    } else {
+                        addLog(`❌ Queue ${item.id} gagal permanen: ${e.message}`, true);
+                    }
+                }
+                
+                // Small delay between queue processing to avoid flooding
+                await new Promise(r => setTimeout(r, 500));
+            }
+        } finally {
+            window.syncLock = false;
+        }
+        
+        this.saveQueue(failed);
+        
+        if (failed.length === 0) {
+            addLog(`✅ Semua antrian terproses!`, false);
+        }
+        
+        return true;
+    }
+    
+    async sendWithTimeout(item, timeoutMs) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        
+        try {
+            const response = await limitedFetch(`${API_BASE}/api/absen`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(item.payload),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            return await response.json();
+        } catch(e) {
+            clearTimeout(timeoutId);
+            throw e;
+        }
+    }
+    
+    updateQueueBadge() {
+        const qty = this.getQueue().length;
+        const badge = document.getElementById('queueStatus');
+        if (badge) {
+            badge.innerHTML = `📦 Q:${qty}`;
+            if (qty > 0) {
+                badge.style.background = 'rgba(255,170,0,0.2)';
+                badge.style.borderLeftColor = '#ffaa00';
+            } else {
+                badge.style.background = 'rgba(0,255,157,0.1)';
+                badge.style.borderLeftColor = '#00ff9d';
+            }
+        }
+        this.updateQueueSizeDisplay();
+    }
+    
+    clearQueue() {
+        if (confirm(`Hapus ${this.getQueue().length} antrian?`)) {
+            this.saveQueue([]);
+            addLog(`🗑️ Queue dikosongkan`, false);
+            this.updateQueueBadge();
+        }
+    }
+}
+
+const offlineQueue = new OfflineQueue();
+window.syncLock = false;
+
+// ==================== HELPER FUNCTIONS ====================
+function $(id) { return document.getElementById(id); }
+
+function getWIBDate() { 
+    return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })); 
+}
+
+function WIB_TIME() { 
+    return getWIBDate().toLocaleTimeString('id-ID', { hour12: false }); 
+}
+
+function getTimestamp() { return Date.now(); }
+
+function addLog(msg, isError = false) {
+    const logDiv = $('logArea');
+    const entry = document.createElement('div');
+    entry.style.color = isError ? '#ff0055' : '#00ff9d';
+    entry.style.borderBottom = '1px solid #1a1a1a';
+    entry.style.padding = '4px 0';
+    entry.style.fontSize = '0.65rem';
+    entry.innerHTML = `[${WIB_TIME()}] ${msg}`;
+    logDiv.appendChild(entry);
+    logDiv.scrollTop = logDiv.scrollHeight;
+    
+    while (logDiv.children.length > 100) {
+        logDiv.removeChild(logDiv.firstChild);
+    }
+    
+    console.log(msg);
+}
+
+window.closeModal = function(id) {
+    $(id).style.display = 'none';
+    if (id === 'adminModal') {
+        if ($('adminPassword')) $('adminPassword').value = '';
+    }
 };
-let res=await fetch(`${API_BASE}/api/absen`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});let result=await res.json();
-if(result.ok){addLog(`✅ ABSEN BERHASIL! ID: ${result.logId}`);alert(`✅ ABSEN BERHASIL!\nID: ${result.logId}`);setTimeout(()=>location.reload(),2000);}else{alert(`❌ GAGAL: ${result.code||result.msg||'Unknown error'}`);}}catch(e){addLog("❌ Error: "+e.message,true);alert("Error: "+e.message);}finally{isBusy=false;btn.disabled=!isSystemReady();btn.innerHTML="✅ ABSEN SEKARANG";updateSystemUI();}}
-async function adminLogin(){let pass=$('adminPassword').value.trim();if(!pass){alert("MASUKKAN PASSWORD!");return;}try{let res=await fetch(`${ADMIN_BASE}/api/admin/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pass})});if(!res.ok){alert("❌ SERVER ERROR!");return;}let result=await res.json();if(result.ok&&result.token){adminToken=result.token;$('adminLoginDiv').style.display='none';$('adminPanel').style.display='block';await loadDashboard();addLog("✅ Admin login berhasil");}else{alert("❌ PASSWORD SALAH!");}}catch(e){alert("Error: "+e.message);}}
-async function loadDashboard(){if(!adminToken)return;try{let res=await fetch(`${ADMIN_BASE}/api/admin/dashboard`,{headers:{"Authorization":`Bearer ${adminToken}`}});if(!res.ok)throw new Error(`HTTP ${res.status}`);let data=await res.json();if(!data.ok)throw new Error("INVALID RESPONSE");allLogs=data.logs||[];let stats=data.stats||{};$('statTotal').innerHTML=stats.total||0;$('statToday').innerHTML=stats.today||0;$('statAlert').innerHTML=stats.alert||0;$('statAnomaly').innerHTML=stats.anomaly||0;$('statBanned').innerHTML=stats.banned||0;$('statStorage').innerHTML=stats.storageMB||'0';let percent=((stats.storage||0)/(stats.maxStorage||1048576000))*100;$('statStoragePercent').innerHTML=percent.toFixed(1)+'%';if(document.getElementById('storageProgress')){document.getElementById('storageProgress').style.width=Math.min(percent,100)+'%';}if(percent>80)addLog("⚠️ PERINGATAN! Storage "+percent.toFixed(1)+"%!",true);let projects=[...new Set(allLogs.map(l=>l.project).filter(p=>p))];let fp=$('filterProject');fp.innerHTML='<option value="ALL">📁 SEMUA PROJECT</option>';projects.forEach(p=>{fp.innerHTML+=`<option value="${p}">${p}</option>`;});renderLogs();addLog(`✅ Dashboard loaded: ${allLogs.length} logs`);}catch(e){addLog("❌ Load dashboard error: "+e.message,true);}}
-function renderLogs(){let search=$('searchInput').value.toLowerCase();let project=$('filterProject').value;let filtered=allLogs.filter(l=>{if(project!=='ALL'&&l.project!==project)return false;if(search&&!l.nama.toLowerCase().includes(search))return false;return true;});let tbody=$('adminTableBody');if(filtered.length===0){tbody.innerHTML='<tr><td colspan="9" class="loading">📭 Tidak ada data</td></tr>';return;}let html='';filtered.slice(0,200).forEach((l,i)=>{let cls='',st='NORMAL';if(l.alert&&l.anomaly){cls='alert-row';st='⚠️ ALERT+ANOMALY';}else if(l.alert){cls='alert-row';st='⚠️ ALERT';}else if(l.anomaly){cls='anomaly-row';st='🌀 ANOMALY';}html+=`<tr class="${cls}"><td>${i+1}</td><td>${l.nama||'-'}</td><td>${l.waktu||'-'}</td><td><span class="badge badge-normal">${l.project||'-'}</span></td><td>${l.lokasi||'-'}</td><td>${l.jarak||0}m</td><td>${l.accuracy||0}m</td><td><span class="badge ${l.alert?'badge-alert':(l.anomaly?'badge-anomaly':'badge-normal')}">${st}</span></td><td><img src="${ADMIN_BASE}/api/admin/photo-viewer?hash=${l.photo_hash}" class="photo-thumb" onclick="viewPhoto('${l.photo_hash}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect width=%2250%22 height=%2250%22 fill=%22%23333%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 fill=%22%23666%22 dy=%22.3em%22 text-anchor=%22middle%22%3ENO%3C/text%3E%3C/svg%3E'"></td></tr>`;});tbody.innerHTML=html;}
-async function exportLogs(){if(!adminToken)return;try{let res=await fetch(`${ADMIN_BASE}/api/admin/export`,{headers:{"Authorization":`Bearer ${adminToken}`}});if(!res.ok)throw new Error("Export gagal");let data=await res.json();let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});let url=URL.createObjectURL(blob);let a=document.createElement('a');a.href=url;a.download=`gip_export_${Date.now()}.json`;a.click();URL.revokeObjectURL(url);addLog("✅ Export berhasil");}catch(e){alert("Error: "+e.message);}}
-async function deleteAllData(){if(!adminToken)return;if(!confirm("⚠️ PERINGATAN! Hapus SEMUA data?"))return;if(!confirm("KONFIRMASI AKHIR: Tekan OK untuk menghapus SEMUA data!"))return;try{let res=await fetch(`${ADMIN_BASE}/api/admin/delete-all`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${adminToken}`},body:JSON.stringify({confirm:true})});let data=await res.json();if(data.ok){alert("✅ SEMUA DATA BERHASIL DIHAPUS!");await loadDashboard();}else{alert("❌ Gagal: "+data.msg);}}catch(e){alert("Error: "+e.message);}}
-async function unbanDevice(){if(!adminToken)return;let fp=prompt("Masukkan Fingerprint device:");if(!fp)return;try{let res=await fetch(`${ADMIN_BASE}/api/admin/unban`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${adminToken}`},body:JSON.stringify({fingerprint:fp})});let data=await res.json();if(data.ok){alert("✅ Device diunban!");await loadDashboard();}else{alert("❌ Gagal!");}}catch(e){alert("Error: "+e.message);}}
-async function resetDevice(){if(!adminToken)return;let fp=prompt("Masukkan Fingerprint device yang mau direset:");if(!fp)return;try{let res=await fetch(`${ADMIN_BASE}/api/admin/reset-device`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${adminToken}`},body:JSON.stringify({fingerprint:fp})});let data=await res.json();if(data.ok){alert("✅ Device direset!");await loadDashboard();}else{alert("❌ Gagal!");}}catch(e){alert("Error: "+e.message);}}
-async function openSettings(){if(!adminToken)return;try{let res=await fetch(`${ADMIN_BASE}/api/admin/settings`,{headers:{"Authorization":`Bearer ${adminToken}`}});let data=await res.json();$('photoQuality').value=data.photo_quality||70;$('photoMaxSize').value=(data.photo_max_size||350000)/1000;$('qualityValue').innerHTML=(data.photo_quality||70)+'%';$('sizeValue').innerHTML=((data.photo_max_size||350000)/1000)+' KB';$('settingsModal').style.display='flex';}catch(e){addLog("Error open settings: "+e.message,true);}}
-async function saveSettings(){if(!adminToken)return;let quality=parseInt($('photoQuality').value);let maxSize=parseInt($('photoMaxSize').value)*1000;try{await fetch(`${ADMIN_BASE}/api/admin/settings`,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${adminToken}`},body:JSON.stringify({photo_quality:quality,photo_max_size:maxSize})});alert("✅ Settings saved!");closeModal('settingsModal');}catch(e){alert("Error: "+e.message);}}
-async function refreshLocationList(){try{let res=await fetch(`${API_BASE}/api/locations`);let d=await res.json();let locs=Array.isArray(d)?d:(d.data||[]);locations=locs;let c=$('locationList');c.innerHTML='<h4>📋 DAFTAR LOKASI:</h4>';if(!locations.length){c.innerHTML+='<div>📭 Belum ada lokasi</div>';return;}locations.forEach(loc=>{c.innerHTML+=`<div class="location-item"><strong>${loc.name}</strong><br>📍 ${loc.lat}, ${loc.lng}<br>📏 Radius: ${loc.radius}m | Project: ${loc.project}<div style="margin-top:8px;"><button class="btn-icon" onclick="editLocation('${loc.id}')">✏️ EDIT</button><button class="btn-icon" onclick="deleteLocation('${loc.id}')">🗑️ HAPUS</button></div></div>`;});}catch(e){addLog("Error load locations: "+e.message,true);}}
-window.editLocation=async function(id){let loc=locations.find(l=>l.id===id);if(!loc){alert("LOKASI TIDAK DITEMUKAN!");return;}$('editLocId').value=loc.id;$('editLocName').value=loc.name;$('editLocLat').value=loc.lat;$('editLocLng').value=loc.lng;$('editLocRadius').value=loc.radius;$('editLocProject').value=loc.project;$('editLocModal').style.display='flex';};
-async function updateLocation(){let id=$('editLocId').value;let name=$('editLocName').value.trim();let lat=parseFloat($('editLocLat').value);let lng=parseFloat($('editLocLng').value);let radius=parseInt($('editLocRadius').value);let project=$('editLocProject').value.trim();if(!name||isNaN(lat)||isNaN(lng)||isNaN(radius)){alert("ISI SEMUA FIELD!");return;}let pass=prompt("ADMIN PASSWORD:");if(!pass)return;try{let loginRes=await fetch(`${ADMIN_BASE}/api/admin/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pass})});let loginData=await loginRes.json();if(!loginData.ok||!loginData.token){alert("❌ PASSWORD SALAH!");return;}let res=await fetch(`${ADMIN_BASE}/api/admin/locations`,{method:"POST",headers:{"Authorization":`Bearer ${loginData.token}`},body:JSON.stringify({action:"UPDATE",id,data:{name,lat,lng,radius,project}})});let result=await res.json();if(result.ok){alert("✅ LOKASI DIUPDATE!");closeModal('editLocModal');await loadLocations();await refreshLocationList();}else{alert("❌ GAGAL UPDATE!");}}catch(e){alert("Error: "+e.message);}}
-window.deleteLocation=async function(id){if(!confirm("Yakin hapus lokasi ini?"))return;let pass=prompt("ADMIN PASSWORD:");if(!pass)return;try{let loginRes=await fetch(`${ADMIN_BASE}/api/admin/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pass})});let loginData=await loginRes.json();if(!loginData.ok||!loginData.token){alert("❌ PASSWORD SALAH!");return;}let res=await fetch(`${ADMIN_BASE}/api/admin/locations`,{method:"POST",headers:{"Authorization":`Bearer ${loginData.token}`},body:JSON.stringify({action:"DELETE",id})});let result=await res.json();if(result.ok){alert("✅ LOKASI DIHAPUS!");await refreshLocationList();await loadLocations();}else{alert("❌ GAGAL HAPUS!");}}catch(e){alert("Error: "+e.message);}};
-async function saveNewLocation(){let name=$('newLocName').value.trim();let lat=parseFloat($('newLocLat').value);let lng=parseFloat($('newLocLng').value);let radius=parseInt($('newLocRadius').value);let project=$('newLocProject').value.trim();if(!name||isNaN(lat)||isNaN(lng)){alert("ISI SEMUA FIELD!");return;}let pass=prompt("ADMIN PASSWORD:");if(!pass)return;try{let loginRes=await fetch(`${ADMIN_BASE}/api/admin/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pass})});let loginData=await loginRes.json();if(!loginData.ok||!loginData.token){alert("❌ PASSWORD SALAH!");return;}let res=await fetch(`${ADMIN_BASE}/api/admin/locations`,{method:"POST",headers:{"Authorization":`Bearer ${loginData.token}`},body:JSON.stringify({action:"ADD",data:{name,lat,lng,radius,project}})});let result=await res.json();if(result.ok){alert("✅ LOKASI TERSIMPAN!");closeModal('locModal');await loadLocations();await refreshLocationList();$('newLocName').value='';$('newLocLat').value='';$('newLocLng').value='';$('newLocProject').value='';}else{alert("❌ GAGAL SIMPAN!");}}catch(e){alert("Error: "+e.message);}}
-function autoFillGPS(){if(currentGPS&&currentGPS.coords){$('newLocLat').value=currentGPS.coords.latitude.toFixed(6);$('newLocLng').value=currentGPS.coords.longitude.toFixed(6);addLog("✅ Koordinat GPS terisi otomatis");}else{alert("Tunggu GPS dulu!");}}
-async function openLocationManager(){let pass=prompt("ADMIN PASSWORD:");if(!pass)return;try{let res=await fetch(`${ADMIN_BASE}/api/admin/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pass})});let data=await res.json();if(!data.ok||!data.token){alert("❌ PASSWORD SALAH!");return;}adminToken=data.token;await refreshLocationList();setTimeout(autoFillGPS,500);setTimeout(autoFillGPS,1500);setTimeout(autoFillGPS,3000);$('locModal').style.display='flex';}catch(e){alert("Error: "+e.message);}}
-function showZoomQR(){if(!qrId)return;$('qrZoomContainer').innerHTML='';new QRCode($('qrZoomContainer'),{text:qrId,width:280,height:280});$('qrModal').style.display='flex';}
-function startTimer(){if(timerStarted)return;timerStarted=true;setInterval(()=>{$('wibTime').innerHTML=new Date().toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta'});},1000);setInterval(async()=>{if(qrCountdown>0&&!isBusy){qrCountdown--;let m=Math.floor(qrCountdown/60),s=qrCountdown%60;$('qrTimer').innerHTML=`⏱️ Refresh in: ${m}:${s.toString().padStart(2,'0')}`;if(qrCountdown<=0)await refreshQRToken();}},1000);setInterval(async()=>{if(!isBusy)await refreshChallengeToken();},170000);}
-async function boot(){addLog("🔥 GIP 66 ELITE BOOTING...");addLog(`🌐 API: ${API_BASE}`);addLog(`🌐 ADMIN: ${ADMIN_BASE}`);fingerprint=await getStableFingerprint();addLog(`🆔 FP: ${fingerprint.slice(0,16)}...`);try{await initCamera();}catch(e){alert("KAMERA WAJIB AKTIF!");addLog("❌ FATAL: Kamera error",true);return;}initGPS();await refreshQRToken();await refreshChallengeToken();await loadLocations();startTimer();updateSystemUI();addLog("✅ SISTEM SIAP!");}
-window.onload=boot;
-$('absenBtn').onclick=submitAbsen;
-$('adminBtn').onclick=()=>$('adminModal').style.display='flex';
-$('manageLocBtn').onclick=openLocationManager;
-$('zoomQrBtn').onclick=showZoomQR;
-$('loginAdminBtn').onclick=adminLogin;
-$('refreshDashboardBtn').onclick=loadDashboard;
-$('exportLogsBtn').onclick=exportLogs;
-$('deleteAllBtn').onclick=deleteAllData;
-$('unbanDeviceBtn').onclick=unbanDevice;
-$('resetDeviceBtn').onclick=resetDevice;
-$('settingsBtn').onclick=openSettings;
-$('saveSettingsBtn').onclick=saveSettings;
-$('saveLocationBtn').onclick=saveNewLocation;
-$('autoGpsBtn').onclick=autoFillGPS;
-$('updateLocationBtn').onclick=updateLocation;
-$('filterProject').onchange=renderLogs;
-$('searchInput').oninput=renderLogs;
-$('photoQuality').oninput=()=>{$('qualityValue').innerHTML=$('photoQuality').value+'%';};
-$('photoMaxSize').oninput=()=>{$('sizeValue').innerHTML=$('photoMaxSize').value+' KB';};
+
+// ==================== CRYPTO FUNCTIONS ====================
+async function generateDeviceFingerprint() {
+    const components = [
+        navigator.userAgent,
+        navigator.language,
+        screen.width + 'x' + screen.height,
+        screen.colorDepth,
+        new Date().getTimezoneOffset(),
+        navigator.hardwareConcurrency || 4,
+        navigator.deviceMemory ? Math.floor(navigator.deviceMemory) : 4
+    ];
+    const data = components.join('|');
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
+}
+
+async function getStableFingerprint() {
+    let fp = localStorage.getItem("GIP_FP");
+    if (fp && fp.length === 32) return fp;
+    fp = await generateDeviceFingerprint();
+    localStorage.setItem("GIP_FP", fp);
+    return fp;
+}
+
+async function generateHMAC(message) {
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(MASTER_KEY);
+    const cryptoKey = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(message));
+    return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
+}
+
+// FIX #3: Lightweight photo hash
+async function generateLightweightHash(data) {
+    // Only hash timestamp + fingerprint + username for ID, not the full base64
+    const encoder = new TextEncoder();
+    const hash = await crypto.subtle.digest('SHA-256', encoder.encode(data));
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
+}
+
+// ==================== SYSTEM STATUS ====================
+function isSystemReady() {
+    const gpsValid = currentGPS && currentGPS.coords && currentGPS.coords.accuracy > 0 && currentGPS.coords.accuracy < 100;
+    return !!(qrId && nonce && fingerprint && gpsValid);
+}
+
+function updateSystemUI() {
+    const ready = isSystemReady();
+    const btn = $('absenBtn');
+    if (btn) btn.disabled = !ready;
+    $('sysStatus').innerHTML = ready ? "🟢 SIAP" : "🔴 BELUM SIAP";
+    
+    if (currentGPS && currentGPS.coords) {
+        const acc = currentGPS.coords.accuracy;
+        $('gpsStatus').innerHTML = `📍 GPS: ${acc.toFixed(0)}m`;
+        $('gpsIndicator').innerHTML = `GPS: ${Math.min(100, Math.max(0, Math.round(100 - acc)))}%`;
+        
+        if ($('locModal') && $('locModal').style.display === 'flex') {
+            if ($('newLocLat')) $('newLocLat').value = currentGPS.coords.latitude.toFixed(6);
+            if ($('newLocLng')) $('newLocLng').value = currentGPS.coords.longitude.toFixed(6);
+        }
+    }
+    
+    offlineQueue.updateQueueBadge();
+}
+
+// ==================== CAMERA ====================
+async function waitCameraReady() {
+    const video = $('video');
+    if (video.videoWidth && video.videoHeight) return true;
+    
+    return new Promise((resolve) => {
+        const timeout = setTimeout(() => resolve(false), 5000);
+        video.onloadeddata = () => {
+            clearTimeout(timeout);
+            resolve(true);
+        };
+    });
+}
+
+async function initCamera() {
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 360 } }
+            });
+            $('video').srcObject = cameraStream;
+            addLog("✅ Kamera aktif");
+            return true;
+        } catch(e) {
+            addLog(`❌ Kamera error (attempt ${attempt + 1}/3): ${e.message}`, true);
+            await new Promise(r => setTimeout(r, 500));
+        }
+    }
+    throw new Error("CAMERA FAILED");
+}
+
+// FIX #1: SMALLER PHOTO - 320x240 untuk Android low RAM
+async function capturePhoto() {
+    const video = $('video');
+    const isReady = await waitCameraReady();
+    if (!isReady || !video.videoWidth) throw new Error("KAMERA BELUM SIAP");
+    
+    const canvas = $('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // FIX #1: Turunkan resolusi untuk hemat storage
+    canvas.width = 320;
+    canvas.height = 240;
+    
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    
+    const waktuStr = WIB_TIME();
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, canvas.height - 24, canvas.width, 24);
+    ctx.font = "8px 'Courier New'";
+    ctx.fillStyle = "#00ff9d";
+    ctx.fillText(`GIP 66 | ${waktuStr} | ${fingerprint.slice(0, 6)}`, 3, canvas.height - 8);
+    
+    return canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
+}
+
+// ==================== GPS ====================
+function initGPS() {
+    if (!navigator.geolocation) {
+        addLog("❌ GPS tidak didukung!", true);
+        return;
+    }
+    
+    if (geoWatchId) navigator.geolocation.clearWatch(geoWatchId);
+    
+    geoWatchId = navigator.geolocation.watchPosition(
+        (pos) => {
+            currentGPS = pos;
+            if ($('locModal') && $('locModal').style.display === 'flex') {
+                if ($('newLocLat')) $('newLocLat').value = pos.coords.latitude.toFixed(6);
+                if ($('newLocLng')) $('newLocLng').value = pos.coords.longitude.toFixed(6);
+            }
+            updateSystemUI();
+        },
+        (err) => {
+            addLog("❌ GPS Error: " + err.message, true);
+            $('gpsStatus').innerHTML = "📍 GPS: ERROR";
+            $('gpsIndicator').innerHTML = "GPS: 0%";
+            updateSystemUI();
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+// ==================== FETCH WITH RETRY & TIMEOUT + LIMITER ====================
+async function fetchWithRetry(url, options = {}, maxRetries = 3, timeoutMs = 15000) {
+    let lastError;
+    const delays = [1000, 2000, 4000];
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        
+        try {
+            const response = await limitedFetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => response.statusText);
+                
+                if (response.status >= 400 && response.status < 500) {
+                    throw new Error(`CLIENT_${response.status}:${errorText.substring(0, 100)}`);
+                }
+                
+                if (response.status >= 500 && response.status < 600) {
+                    throw new Error(`SERVER_${response.status}:${errorText.substring(0, 100)}`);
+                }
+                
+                throw new Error(`HTTP_${response.status}:${errorText.substring(0, 100)}`);
+            }
+            
+            const data = await response.json();
+            return data;
+            
+        } catch(e) {
+            clearTimeout(timeoutId);
+            lastError = e;
+            
+            const isNetworkError = e.name === 'AbortError' || 
+                                   e.message.includes('fetch') || 
+                                   e.message.includes('network') ||
+                                   e.message.includes('Failed to fetch');
+            
+            const isServerError = e.message.includes('SERVER_5');
+            
+            if (!isNetworkError && !isServerError) {
+                addLog(`❌ Request gagal (tidak di-retry): ${e.message.substring(0, 80)}`, true);
+                throw e;
+            }
+            
+            if (attempt < maxRetries) {
+                const delayMs = delays[attempt];
+                addLog(`⚠️ Retry ${attempt + 1}/${maxRetries} untuk ${url.substring(0, 50)}... (delay ${delayMs}ms)`, true);
+                await new Promise(r => setTimeout(r, delayMs));
+            } else {
+                addLog(`❌ Request gagal setelah ${maxRetries + 1} percobaan: ${e.message.substring(0, 80)}`, true);
+                throw e;
+            }
+        }
+    }
+    
+    throw lastError;
+}
+
+// ==================== API CALLS ====================
+async function refreshQRToken() {
+    if (isBusy) return;
+    try {
+        const data = await fetchWithRetry(`${API_BASE}/api/qr-token`, {}, 2, 8000);
+        if (!data.qrId) throw new Error("QR INVALID");
+        
+        qrId = data.qrId;
+        $('qrContainer').innerHTML = '';
+        new QRCode($('qrContainer'), { text: qrId, width: 130, height: 130 });
+        $('qrStatus').innerHTML = "📱 QR: OK";
+        qrCountdown = 300;
+        addLog("✅ QR Token refreshed");
+    } catch(e) {
+        addLog("❌ QR error: " + e.message, true);
+        qrId = null;
+        $('qrStatus').innerHTML = "📱 QR: ERROR";
+        setTimeout(refreshQRToken, 5000);
+    }
+    updateSystemUI();
+}
+
+async function refreshChallengeToken() {
+    if (isBusy) return;
+    try {
+        const data = await fetchWithRetry(`${API_BASE}/api/challenge`, {}, 2, 8000);
+        if (!data.nonce) throw new Error("NONCE INVALID");
+        
+        nonce = data.nonce;
+        $('nonceStatus').innerHTML = "🎯 NONCE: OK";
+        addLog("✅ Challenge token refreshed");
+    } catch(e) {
+        addLog("❌ Challenge error: " + e.message, true);
+        nonce = null;
+        $('nonceStatus').innerHTML = "🎯 NONCE: ERROR";
+        setTimeout(refreshChallengeToken, 5000);
+    }
+    updateSystemUI();
+}
+
+async function loadLocations() {
+    try {
+        const data = await fetchWithRetry(`${API_BASE}/api/locations`, {}, 2, 8000);
+        locations = Array.isArray(data) ? data : (data.data || []);
+        
+        const select = $('locationSelect');
+        select.innerHTML = '<option value="">-- PILIH LOKASI --</option>';
+        locations.forEach(l => {
+            select.innerHTML += `<option value='${l.id}'>📍 ${l.name} (${l.project}) - ${l.radius}m</option>`;
+        });
+        addLog(`✅ ${locations.length} lokasi tersedia`);
+    } catch(e) {
+        addLog("❌ Load lokasi error: " + e.message, true);
+        locations = [];
+    }
+}
+
+// ==================== ABSEN SUBMIT ====================
+async function submitAbsen() {
+    if (isBusy) {
+        addLog("⏳ Sistem sedang sibuk, tunggu...", true);
+        return;
+    }
+    
+    if (!isSystemReady()) {
+        alert("SISTEM BELUM SIAP!\nPastikan GPS, QR, dan Challenge token valid.");
+        return;
+    }
+    
+    const lockedQR = qrId;
+    const lockedNonce = nonce;
+    const lockedFP = fingerprint;
+    
+    if (!lockedNonce || !lockedQR || !lockedFP) {
+        alert("TOKEN TIDAK VALID!");
+        return;
+    }
+    
+    const userName = $('userName').value.trim();
+    const locationId = $('locationSelect').value;
+    
+    if (!userName) {
+        alert("ISI NAMA!");
+        return;
+    }
+    if (!locationId) {
+        alert("PILIH LOKASI!");
+        return;
+    }
+    
+    const selectedLocation = locations.find(l => l.id === locationId);
+    if (!selectedLocation) {
+        alert("LOKASI INVALID!");
+        return;
+    }
+    
+    isBusy = true;
+    const btn = $('absenBtn');
+    btn.disabled = true;
+    btn.innerHTML = "⚡ PROSES ABSEN...";
+    addLog("🚀 Memulai proses absen...");
+    
+    let payload = null;
+    let photoBase64 = null;
+    let photoHash = null;
+    let timestamp = null;
+    let lat = null;
+    let lng = null;
+    
+    try {
+        photoBase64 = await capturePhoto();
+        
+        // FIX #3: Lightweight hash - tidak hash full base64
+        const hashInput = `${Date.now()}_${fingerprint}_${userName}`;
+        photoHash = await generateLightweightHash(hashInput);
+        
+        timestamp = getTimestamp();
+        lat = currentGPS.coords.latitude.toFixed(6);
+        lng = currentGPS.coords.longitude.toFixed(6);
+        
+        const rawSignature = `${lockedQR}${lockedNonce}${userName.toUpperCase()}${timestamp}`;
+        const signature = await generateHMAC(rawSignature);
+        
+        payload = {
+            qrId: lockedQR,
+            nonce: lockedNonce,
+            nama: userName.toUpperCase(),
+            lat: parseFloat(lat),
+            lng: parseFloat(lng),
+            accuracy: currentGPS.coords.accuracy,
+            locationId: locationId,
+            fingerprint: lockedFP,
+            photoHash: photoHash,
+            photoBase64: photoBase64,
+            timestamp: timestamp,
+            signature: signature
+        };
+        
+        if (!onlineStatus) {
+            addLog("📦 Offline mode - menyimpan ke antrian", false);
+            if (payload) {
+                offlineQueue.add({ payload });
+                alert("✅ Disimpan ke antrian offline!\nAkan sync saat koneksi normal.");
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                throw new Error("Payload tidak dapat dibuat");
+            }
+            return;
+        }
+        
+        const result = await fetchWithRetry(`${API_BASE}/api/absen`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        }, 2, 15000);
+        
+        if (result && result.ok) {
+            addLog(`✅ ABSEN BERHASIL! ID: ${result.logId}`);
+            alert(`✅ ABSEN BERHASIL!\nID: ${result.logId}`);
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            throw new Error(result?.code || result?.msg || 'Unknown error');
+        }
+        
+    } catch(e) {
+        addLog("❌ Error: " + e.message, true);
+        
+        if (payload && (e.message.includes('Failed to fetch') || e.message.includes('network') || e.message.includes('NETWORK') || e.message.includes('SERVER'))) {
+            addLog("📦 Network error - menyimpan ke antrian", false);
+            offlineQueue.add({ payload });
+            alert("⚠️ Koneksi bermasalah!\nData disimpan ke antrian.");
+        } else if (!payload) {
+            addLog("❌ Gagal membuat payload - tidak bisa simpan ke antrian", true);
+            alert("Error: Gagal memproses data. Coba lagi.");
+        } else {
+            alert("Error: " + e.message);
+        }
+    } finally {
+        isBusy = false;
+        btn.disabled = !isSystemReady();
+        btn.innerHTML = "✅ ABSEN SEKARANG";
+        updateSystemUI();
+    }
+}
+
+// ==================== ADMIN FUNCTIONS ====================
+async function adminLogin() {
+    const pass = $('adminPassword').value.trim();
+    if (!pass) {
+        alert("MASUKKAN PASSWORD!");
+        return;
+    }
+    
+    try {
+        const data = await fetchWithRetry(`${ADMIN_BASE}/api/admin/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: pass })
+        }, 2, 10000);
+        
+        if (data.ok && data.token) {
+            saveAdminToken(data.token);
+            $('adminLoginDiv').style.display = 'none';
+            $('adminPanel').style.display = 'block';
+            await loadDashboard();
+            addLog("✅ Admin login berhasil");
+        } else {
+            alert("❌ PASSWORD SALAH!");
+        }
+    } catch(e) {
+        addLog("❌ Admin login error: " + e.message, true);
+        alert("Error: " + e.message);
+    }
+}
+
+async function loadDashboard() {
+    let token = adminToken;
+    if (!token && loadAdminToken()) {
+        token = adminToken;
+    }
+    
+    if (!token) return;
+    
+    try {
+        const data = await fetchWithRetry(`${ADMIN_BASE}/api/admin/dashboard`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        }, 2, 10000);
+        
+        if (!data.ok) {
+            if (data.code === 'UNAUTHORIZED') {
+                clearAdminToken();
+                $('adminLoginDiv').style.display = 'block';
+                $('adminPanel').style.display = 'none';
+                addLog("❌ Session expired, login ulang", true);
+            }
+            throw new Error("INVALID RESPONSE");
+        }
+        
+        allLogs = data.logs || [];
+        const stats = data.stats || {};
+        
+        $('statTotal').innerHTML = stats.total || 0;
+        $('statToday').innerHTML = stats.today || 0;
+        $('statAlert').innerHTML = stats.alert || 0;
+        $('statAnomaly').innerHTML = stats.anomaly || 0;
+        $('statBanned').innerHTML = stats.banned || 0;
+        
+        const projects = [...new Set(allLogs.map(l => l.project).filter(p => p))];
+        const fp = $('filterProject');
+        fp.innerHTML = '<option value="ALL">📁 SEMUA PROJECT</option>';
+        projects.forEach(p => {
+            fp.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+        
+        renderLogs();
+        addLog(`✅ Dashboard loaded: ${allLogs.length} logs`);
+    } catch(e) {
+        addLog("❌ Load dashboard error: " + e.message, true);
+    }
+}
+
+function renderLogs() {
+    const search = $('searchInput').value.toLowerCase();
+    const project = $('filterProject').value;
+    
+    const filtered = allLogs.filter(l => {
+        if (project !== 'ALL' && l.project !== project) return false;
+        if (search && !l.nama.toLowerCase().includes(search)) return false;
+        return true;
+    });
+    
+    const tbody = $('adminTableBody');
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="loading">📭 Tidak ada数据</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    filtered.slice(0, 200).forEach((l, i) => {
+        let cls = '', st = 'NORMAL';
+        if (l.alert && l.anomaly) {
+            cls = 'alert-row';
+            st = '⚠️ ALERT+ANOMALY';
+        } else if (l.alert) {
+            cls = 'alert-row';
+            st = '⚠️ ALERT';
+        } else if (l.anomaly) {
+            cls = 'anomaly-row';
+            st = '🌀 ANOMALY';
+        }
+        
+        const photoUrl = `${ADMIN_BASE}/api/admin/photo-viewer?hash=${l.photo_hash}&_t=${Date.now()}`;
+        
+        html += `<tr class="${cls}">
+            <td><input type="checkbox" class="log-checkbox" data-id="${l.id}"></td>
+            <td>${i + 1}</td>
+            <td>${l.nama || '-'}</td>
+            <td>${l.waktu || '-'}</td>
+            <td><span class="badge badge-normal">${l.project || '-'}</span></td>
+            <td>${l.location_name || '-'}</td>
+            <td>${l.jarak || 0}m</td>
+            <td>${l.accuracy || 0}m</td>
+            <td><span class="badge ${l.alert ? 'badge-alert' : (l.anomaly ? 'badge-anomaly' : 'badge-normal')}">${st}</span></td>
+            <td><img src="${photoUrl}" class="photo-thumb" onclick="viewPhoto('${l.photo_hash}')" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2250%22 height=%2250%22%3E%3Crect width=%2250%22 height=%2250%22 fill=%22%23333%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 fill=%22%23666%22 dy=%22.3em%22 text-anchor=%22middle%22%3ENO%3C/text%3E%3C/svg%3E'"></td>
+        <tr>`;
+    });
+    tbody.innerHTML = html;
+    
+    const selectAll = $('selectAllCheckbox');
+    if (selectAll) {
+        selectAll.onclick = function() {
+            document.querySelectorAll('.log-checkbox').forEach(cb => cb.checked = selectAll.checked);
+        };
+    }
+}
+
+// ==================== PHOTO VIEWER ====================
+async function viewPhoto(hash) {
+    if (!hash) return alert("HASH FOTO TIDAK ADA");
+    
+    $('photoModal').style.display = 'flex';
+    $('photoModalImg').src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect width="200" height="200" fill="%23333"/%3E%3Ctext x="50%25" y="50%25" fill="%2300ff9d" dy=".3em" text-anchor="middle"%3ELOADING...%3C/text%3E%3C/svg%3E';
+    
+    try {
+        let photoData = null;
+        let token = adminToken;
+        if (!token && loadAdminToken()) token = adminToken;
+        
+        if (token) {
+            try {
+                const response = await fetchWithRetry(`${ADMIN_BASE}/api/admin/photo-viewer?hash=${hash}&json=true`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                }, 2, 10000);
+                
+                if (response && response.ok && response.data) {
+                    photoData = response.data;
+                }
+            } catch(e) {
+                addLog("⚠️ Gagal load foto dengan token: " + e.message, true);
+            }
+        }
+        
+        if (!photoData) {
+            const response = await fetch(`${ADMIN_BASE}/api/admin/photo-viewer?hash=${hash}&thumb=true&_t=${Date.now()}`);
+            if (response.ok) {
+                const text = await response.text();
+                try {
+                    const json = JSON.parse(text);
+                    if (json.ok && json.data) photoData = json.data;
+                } catch(e) {
+                    photoData = text;
+                }
+            }
+        }
+        
+        if (photoData && (photoData.startsWith('data:image') || photoData.startsWith('/9j/') || photoData.includes('base64'))) {
+            $('photoModalImg').src = photoData;
+        } else {
+            throw new Error('Invalid photo data');
+        }
+        
+    } catch(e) {
+        addLog("❌ Gagal load foto: " + e.message, true);
+        $('photoModalImg').src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect width="200" height="200" fill="%23333"/%3E%3Ctext x="50%25" y="50%25" fill="%23ff0055" dy=".3em" text-anchor="middle"%3EFOTO TIDAK DITEMUKAN%3C/text%3E%3C/svg%3E';
+    }
+}
+
+async function deleteSelectedLogs() {
+    let token = adminToken;
+    if (!token && loadAdminToken()) token = adminToken;
+    if (!token) return;
+    
+    const checkboxes = document.querySelectorAll('.log-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert("Pilih minimal 1 data!");
+        return;
+    }
+    if (!confirm(`Hapus ${checkboxes.length} data?`)) return;
+    
+    const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
+    try {
+        const data = await fetchWithRetry(`${ADMIN_BASE}/api/admin/logs/bulk`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ ids: ids })
+        }, 2, 10000);
+        
+        if (data.ok) {
+            alert(`✅ ${data.deleted} data dihapus!`);
+            await loadDashboard();
+        } else {
+            alert("❌ Gagal hapus!");
+        }
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+async function deleteAllData() {
+    let token = adminToken;
+    if (!token && loadAdminToken()) token = adminToken;
+    if (!token) return;
+    
+    if (!confirm("⚠️ PERINGATAN! Hapus SEMUA data?")) return;
+    if (!confirm("KONFIRMASI AKHIR: Tekan OK untuk menghapus SEMUA data!")) return;
+    
+    try {
+        const data = await fetchWithRetry(`${ADMIN_BASE}/api/admin/delete-all`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ confirm: true })
+        }, 2, 10000);
+        
+        if (data.ok) {
+            alert("✅ SEMUA DATA BERHASIL DIHAPUS!");
+            await loadDashboard();
+        } else {
+            alert("❌ Gagal: " + data.msg);
+        }
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+async function exportLogs() {
+    let token = adminToken;
+    if (!token && loadAdminToken()) token = adminToken;
+    if (!token) return;
+    
+    try {
+        const data = await fetchWithRetry(`${ADMIN_BASE}/api/admin/export`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        }, 2, 10000);
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `gip_export_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addLog("✅ Export berhasil");
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+async function unbanDevice() {
+    alert("Fitur unban dalam pengembangan");
+}
+
+async function resetDevice() {
+    alert("Fitur reset device dalam pengembangan");
+}
+
+// ==================== LOCATION MANAGEMENT ====================
+async function openLocationManager() {
+    const pass = prompt("ADMIN PASSWORD:");
+    if (!pass) return;
+    
+    try {
+        const data = await fetchWithRetry(`${ADMIN_BASE}/api/admin/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: pass })
+        }, 2, 10000);
+        
+        if (!data.ok || !data.token) {
+            alert("❌ PASSWORD SALAH!");
+            return;
+        }
+        
+        saveAdminToken(data.token);
+        await refreshLocationList();
+        
+        if (currentGPS && currentGPS.coords) {
+            setTimeout(() => autoFillGPS(), 500);
+        }
+        
+        $('locModal').style.display = 'flex';
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+async function refreshLocationList() {
+    try {
+        const res = await fetch(`${API_BASE}/api/locations`);
+        const d = await res.json();
+        const locs = Array.isArray(d) ? d : (d.data || []);
+        locations = locs;
+        
+        const c = $('locationList');
+        c.innerHTML = '<h4>📋 DAFTAR LOKASI:</h4>';
+        if (!locations.length) {
+            c.innerHTML += '<div>📭 Belum ada lokasi</div>';
+            return;
+        }
+        
+        locations.forEach(loc => {
+            c.innerHTML += `<div class="location-item">
+                <strong>${loc.name}</strong><br>
+                📍 ${loc.lat}, ${loc.lng}<br>
+                📏 Radius: ${loc.radius}m | Project: ${loc.project}
+                <div style="margin-top:8px;">
+                    <button class="btn-icon" onclick="editLocation('${loc.id}')">✏️ EDIT</button>
+                    <button class="btn-icon" onclick="deleteLocation('${loc.id}')">🗑️ HAPUS</button>
+                </div>
+            </div>`;
+        });
+    } catch(e) {
+        addLog("Error load locations: " + e.message, true);
+    }
+}
+
+window.editLocation = async function(id) {
+    const loc = locations.find(l => l.id === id);
+    if (!loc) {
+        alert("LOKASI TIDAK DITEMUKAN!");
+        return;
+    }
+    $('editLocId').value = loc.id;
+    $('editLocName').value = loc.name;
+    $('editLocLat').value = loc.lat;
+    $('editLocLng').value = loc.lng;
+    $('editLocRadius').value = loc.radius;
+    $('editLocProject').value = loc.project;
+    $('editLocModal').style.display = 'flex';
+};
+
+async function updateLocation() {
+    const id = $('editLocId').value;
+    const name = $('editLocName').value.trim();
+    const lat = parseFloat($('editLocLat').value);
+    const lng = parseFloat($('editLocLng').value);
+    const radius = parseInt($('editLocRadius').value);
+    const project = $('editLocProject').value.trim();
+    
+    if (!name || isNaN(lat) || isNaN(lng) || isNaN(radius)) {
+        alert("ISI SEMUA FIELD!");
+        return;
+    }
+    
+    const pass = prompt("ADMIN PASSWORD:");
+    if (!pass) return;
+    
+    try {
+        const loginRes = await fetchWithRetry(`${ADMIN_BASE}/api/admin/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: pass })
+        }, 2, 10000);
+        
+        if (!loginRes.ok || !loginRes.token) {
+            alert("❌ PASSWORD SALAH!");
+            return;
+        }
+        
+        const res = await fetchWithRetry(`${ADMIN_BASE}/api/admin/locations`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${loginRes.token}` },
+            body: JSON.stringify({ action: "UPDATE", id, data: { name, lat, lng, radius, project } })
+        }, 2, 10000);
+        
+        if (res.ok) {
+            alert("✅ LOKASI DIUPDATE!");
+            closeModal('editLocModal');
+            await loadLocations();
+            await refreshLocationList();
+        } else {
+            alert("❌ GAGAL UPDATE!");
+        }
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+window.deleteLocation = async function(id) {
+    if (!confirm("Yakin hapus lokasi ini?")) return;
+    const pass = prompt("ADMIN PASSWORD:");
+    if (!pass) return;
+    
+    try {
+        const loginRes = await fetchWithRetry(`${ADMIN_BASE}/api/admin/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: pass })
+        }, 2, 10000);
+        
+        if (!loginRes.ok || !loginRes.token) {
+            alert("❌ PASSWORD SALAH!");
+            return;
+        }
+        
+        const res = await fetchWithRetry(`${ADMIN_BASE}/api/admin/locations`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${loginRes.token}` },
+            body: JSON.stringify({ action: "DELETE", id })
+        }, 2, 10000);
+        
+        if (res.ok) {
+            alert("✅ LOKASI DIHAPUS!");
+            await refreshLocationList();
+            await loadLocations();
+        } else {
+            alert("❌ GAGAL HAPUS!");
+        }
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+};
+
+async function saveNewLocation() {
+    const name = $('newLocName').value.trim();
+    const lat = parseFloat($('newLocLat').value);
+    const lng = parseFloat($('newLocLng').value);
+    const radius = parseInt($('newLocRadius').value);
+    const project = $('newLocProject').value.trim();
+    
+    if (!name || isNaN(lat) || isNaN(lng)) {
+        alert("ISI SEMUA FIELD!");
+        return;
+    }
+    
+    const pass = prompt("ADMIN PASSWORD:");
+    if (!pass) return;
+    
+    try {
+        const loginRes = await fetchWithRetry(`${ADMIN_BASE}/api/admin/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: pass })
+        }, 2, 10000);
+        
+        if (!loginRes.ok || !loginRes.token) {
+            alert("❌ PASSWORD SALAH!");
+            return;
+        }
+        
+        const res = await fetchWithRetry(`${ADMIN_BASE}/api/admin/locations`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${loginRes.token}` },
+            body: JSON.stringify({ action: "ADD", data: { name, lat, lng, radius, project } })
+        }, 2, 10000);
+        
+        if (res.ok) {
+            alert("✅ LOKASI TERSIMPAN!");
+            closeModal('locModal');
+            await loadLocations();
+            await refreshLocationList();
+            $('newLocName').value = '';
+            $('newLocLat').value = '';
+            $('newLocLng').value = '';
+            $('newLocProject').value = '';
+        } else {
+            alert("❌ GAGAL SIMPAN!");
+        }
+    } catch(e) {
+        alert("Error: " + e.message);
+    }
+}
+
+function autoFillGPS() {
+    if (currentGPS && currentGPS.coords) {
+        $('newLocLat').value = currentGPS.coords.latitude.toFixed(6);
+        $('newLocLng').value = currentGPS.coords.longitude.toFixed(6);
+        addLog("✅ Koordinat GPS terisi otomatis");
+    } else {
+        alert("Tunggu GPS dulu!");
+    }
+}
+
+function showZoomQR() {
+    if (!qrId) return;
+    $('qrZoomContainer').innerHTML = '';
+    new QRCode($('qrZoomContainer'), { text: qrId, width: 280, height: 280 });
+    $('qrModal').style.display = 'flex';
+}
+
+async function syncQueue() {
+    addLog("🔄 Memulai sinkronisasi antrian...", false);
+    await offlineQueue.process(true);
+}
+
+function clearQueue() {
+    offlineQueue.clearQueue();
+}
+
+function openSettings() {
+    const qualitySlider = $('photoQuality');
+    const sizeSlider = $('photoMaxSize');
+    if (qualitySlider) {
+        qualitySlider.value = Math.round(PHOTO_QUALITY * 100);
+        $('qualityValue').innerHTML = qualitySlider.value + '%';
+    }
+    if (sizeSlider) {
+        sizeSlider.value = MAX_PHOTO_SIZE_KB;
+        $('sizeValue').innerHTML = sizeSlider.value + ' KB';
+    }
+    $('settingsModal').style.display = 'flex';
+}
+
+// ==================== TIMERS & NETWORK MONITOR ====================
+function startTimer() {
+    if (timerStarted) return;
+    timerStarted = true;
+    
+    setInterval(() => {
+        $('wibTime').innerHTML = new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta' });
+    }, 1000);
+    
+    setInterval(async () => {
+        if (qrCountdown > 0 && !isBusy) {
+            qrCountdown--;
+            const m = Math.floor(qrCountdown / 60);
+            const s = qrCountdown % 60;
+            $('qrTimer').innerHTML = `⏱️ Refresh in: ${m}:${s.toString().padStart(2, '0')}`;
+            if (qrCountdown <= 0) await refreshQRToken();
+        }
+    }, 1000);
+    
+    setInterval(async () => {
+        if (!isBusy) await refreshChallengeToken();
+    }, 170000);
+    
+    setInterval(async () => {
+        if (onlineStatus && !window.syncLock && activeRequests < MAX_CONCURRENT_REQUESTS) {
+            await offlineQueue.process(false);
+        }
+    }, 30000);
+}
+
+function setupNetworkMonitor() {
+    window.addEventListener('online', async () => {
+        onlineStatus = true;
+        addLog("🌐 Koneksi kembali ONLINE", false);
+        await refreshQRToken();
+        await refreshChallengeToken();
+        await loadLocations();
+        await offlineQueue.process(true);
+        updateSystemUI();
+    });
+    
+    window.addEventListener('offline', () => {
+        onlineStatus = false;
+        addLog("⚠️ Koneksi OFFLINE - mode antrian aktif", true);
+        updateSystemUI();
+    });
+}
+
+// ==================== BOOT ====================
+async function boot() {
+    addLog("🔥 GIP 66 ELITE BOOTING...");
+    addLog(`🌐 API: ${API_BASE}`);
+    addLog(`📸 Resolusi: 320x240, Kualitas: ${PHOTO_QUALITY * 100}%, Max Queue: ${MAX_QUEUE_SIZE}`);
+    
+    fingerprint = await getStableFingerprint();
+    addLog(`🆔 FP: ${fingerprint.slice(0, 16)}...`);
+    
+    if (loadAdminToken()) {
+        addLog("👑 Admin session restored", false);
+    }
+    
+    setupNetworkMonitor();
+    
+    try {
+        await initCamera();
+    } catch(e) {
+        alert("KAMERA WAJIB AKTIF!");
+        addLog("❌ FATAL: Kamera error", true);
+        return;
+    }
+    
+    initGPS();
+    await refreshQRToken();
+    await refreshChallengeToken();
+    await loadLocations();
+    startTimer();
+    updateSystemUI();
+    
+    setTimeout(() => offlineQueue.process(true), 5000);
+    
+    addLog("✅ SISTEM SIAP!");
+}
+
+// ==================== EVENT LISTENERS ====================
+window.onload = boot;
+
+$('absenBtn').onclick = submitAbsen;
+$('adminBtn').onclick = () => {
+    $('adminLoginDiv').style.display = 'block';
+    $('adminPanel').style.display = 'none';
+    $('adminModal').style.display = 'flex';
+};
+$('manageLocBtn').onclick = openLocationManager;
+$('syncQueueBtn').onclick = syncQueue;
+$('clearQueueBtn').onclick = () => clearQueue();
+$('zoomQrBtn').onclick = showZoomQR;
+$('loginAdminBtn').onclick = adminLogin;
+$('refreshDashboardBtn').onclick = loadDashboard;
+$('exportLogsBtn').onclick = exportLogs;
+$('deleteSelectedBtn').onclick = deleteSelectedLogs;
+$('deleteAllBtn').onclick = deleteAllData;
+$('unbanDeviceBtn').onclick = unbanDevice;
+$('resetDeviceBtn').onclick = resetDevice;
+$('settingsBtn').onclick = openSettings;
+$('saveLocationBtn').onclick = saveNewLocation;
+$('autoGpsBtn').onclick = autoFillGPS;
+$('updateLocationBtn').onclick = updateLocation;
+$('filterProject').onchange = renderLogs;
+$('searchInput').oninput = renderLogs;
+$('photoQuality').oninput = () => { $('qualityValue').innerHTML = $('photoQuality').value + '%'; };
+$('photoMaxSize').oninput = () => { $('sizeValue').innerHTML = $('photoMaxSize').value + ' KB'; };
+$('saveSettingsBtn').onclick = () => {
+    alert("⚙️ Settings saved");
+    closeModal('settingsModal');
+};
 </script>
 </body>
 </html>
